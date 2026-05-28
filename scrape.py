@@ -11,6 +11,9 @@ def clean_index(s):
 
     # Remove "(please specify)"
     s = re.sub(r'\(please specify\)', '', s)
+
+    # Replace whitspace of any lenth by a single space
+    s = re.sub(r'\s+', ' ', s)
     
     # Remove leading/trailing whitespace and return
     return s.strip()
@@ -31,7 +34,7 @@ def pre_process(df):
     df.reset_index(inplace=True)
     df.rename(columns={'index' : 'Category/Fuel'},inplace=True)
     df.replace({"CO2" : "NO\"", "CH4" : "NO\"", "N2O" : "NO\""}, "NO", inplace=True)
-
+    
 def correct_code(code):
     if code[-1:] != '.':
         code = code + '.'
