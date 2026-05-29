@@ -125,16 +125,16 @@ def accumulate(data, df, year: int):
                          "Units": "kt",
                          "Value" : df[gas][i]})
 
-folder = "prt-crt-2025-v0.6-20250314-152459_started\\"
+folder = "PRT-CRT-2026-V1.0"
 year = 1990
 data = []
 
-for file in os.listdir(os.fsencode("prt-crt-2025-v0.6-20250314-152459_started")):
+for file in os.listdir(os.fsencode(folder)):
     
-    file_path = folder + os.fsdecode(file)
+    file_path = folder + "\\" + os.fsdecode(file)
     df = read_and_process(file_path)
     accumulate(data, df, year)
     year = year + 1
     
 df = pd.DataFrame(data)
-df.to_csv("prt_crt_2025_fuel_combustion.csv", index=False)
+df.to_csv("prt_crt_2026_fuel_combustion.csv", index=False)
