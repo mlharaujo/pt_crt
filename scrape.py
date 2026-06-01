@@ -21,23 +21,11 @@ def clean_index(s):
     # Remove leading/trailing whitespace and return
     return s.strip()
 
-def clean_headers(s):
-
-    # Remove numbers inside parentheses, like (1) or (2,3)
-    s = re.sub(r'\(\d+(?:,\d+)*\)', '', s)
-
-    # Remove ".1" from the end
-    s = re.sub(r'\.1$', '', s)
-    
-    # Remove leading/trailing whitespace and return
-    return s.strip() 
 
 def pre_process(df):
     df.rename(index=clean_index, inplace=True)
-    df.rename(columns=clean_headers, inplace=True)
+    df.replace("NO\"", "NO", inplace=True)
     df.reset_index(inplace=True)
-    df.rename(columns={'index' : 'Category/Fuel'}, inplace=True)
-    df.replace({"CO2" : "NO\"", "CH4" : "NO\"", "N2O" : "NO\""}, "NO", inplace=True)
     
 def correct_code(code):
     code = re.sub(r'\s+', '', code)
@@ -52,10 +40,12 @@ def one_A_s1(file_path):
     one_A_s1 = pd.read_excel(file_path,
                    sheet_name="Table1.A(a)s1",
                    index_col=0,
-                   usecols="B,H:J",
-                   skiprows=[0,1,2,3,4,5,6,8],
+                   usecols="B,H:K",
+                   names=["Category/Fuel", "CO2 Emissions", "CH4 Emissions", "N2O Emissions", "CO2 Captured"],
+                   skiprows=[0,1,2,3,4,5,6,7],
                    nrows=49
                    )
+    
     return one_A_s1
 
 def one_A_s2(file_path):
@@ -63,14 +53,15 @@ def one_A_s2(file_path):
     one_A_s2 = pd.read_excel(file_path,
                    sheet_name="Table1.A(a)s2",
                    index_col=0,
-                   usecols="B,H:J",
-                   skiprows=[0,1,2,3,4,5,6,8],
+                   usecols="B,H:K",
+                   names=["Category/Fuel", "CO2 Emissions", "CH4 Emissions", "N2O Emissions", "CO2 Captured"],
+                   skiprows=[0,1,2,3,4,5,6,7],
                    nrows=121
-                   )   
+                   )
+
     one_A_s2.rename(index={'Rubber': '1.A.2.g.viii.x. Rubber',
-                 'Other Transformation Industry': '1.A.2.g.viii.y. Other Transformation Industry'
-                },
-          inplace=True)
+                       'Other Transformation Industry': '1.A.2.g.viii.y. Other Transformation Industry'},
+                inplace=True)
 
     return one_A_s2
 
@@ -80,7 +71,8 @@ def one_A_s3(file_path):
                    sheet_name="Table1.A(a)s3",
                    index_col=0,
                    usecols="B,H:J",
-                   skiprows=[0,1,2,3,4,5,6,8,55],
+                   names=["Category/Fuel", "CO2 Emissions", "CH4 Emissions", "N2O Emissions"],
+                   skiprows=[0,1,2,3,4,5,6,7,55],
                    nrows=79
                    )
     one_A_s3.rename(index={'Lubricant Oil' : 'Other liquid fuels: lubricant oil'}, inplace=True)
@@ -92,8 +84,9 @@ def one_A_s4(file_path):
     one_A_s4 = pd.read_excel(file_path,
                    sheet_name="Table1.A(a)s4",
                    index_col=0,
-                   usecols="B,H:J",
-                   skiprows=[0,1,2,3,4,5,6,8],
+                   usecols="B,H:K",
+                   names=["Category/Fuel", "CO2 Emissions", "CH4 Emissions", "N2O Emissions", "CO2 Captured"],
+                   skiprows=[0,1,2,3,4,5,6,7],
                    nrows=92)
     one_A_s4.rename(index={'Military aviation' : '1.A.5.b.i. Military aviation'}, inplace=True)
 
@@ -105,22 +98,23 @@ def one_D(file_path):
                    sheet_name="Table1.D",
                    index_col=0,
                    usecols="B,G:I",
-                   skiprows=[0,1,2,3,4,5,6,8],
+                   names=["Category/Fuel", "CO2 Emissions", "CH4 Emissions", "N2O Emissions"],
+                   skiprows=[0,1,2,3,4,5,6,7],
                    nrows=13
                    )
-    one_D.rename_axis(index=None, inplace=True)
 
     return one_D
 
 def one_B_1(file_path):
+
     one_B_1 = pd.read_excel(file_path,
-                   sheet_name="Table1.B.1",
-                   index_col=0,
-                   usecols="B,F,G",
-                   skiprows=[0,1,2,3,4,5,6,8],
-                   nrows=13
+                        sheet_name="Table1.B.1",
+                        index_col=0,
+                        skiprows=[0,1,2,3,4,5,6,7],
+                        usecols="B,F:I",
+                        names=["Category/Fuel", "CH4 Emissions", "CO2 Emissions", "CH4 Recovery/Flaring", "CO2 Recovery/Flaring"],
+                        nrows=13
                    )
-    one_B_1.rename_axis(index=None, inplace=True)
 
     return one_B_1
 
@@ -129,12 +123,13 @@ def one_B_2(file_path):
     one_B_2 = pd.read_excel(file_path,
                    sheet_name="Table1.B.2",
                    index_col=0,
-                   usecols="B,I,J,K",
-                   skiprows=[0,1,2,3,4,5,6,8],
+                   skiprows=[0,1,2,3,4,5,6,7],
+                   usecols="B,I:L",
+                   names=["Category/Fuel", "CO2 Emissions", "CH4 Emissions", "N2O Emissions", "CO2 Recovery"],
                    nrows=25
                    )
+    one_B_2.rename(index={'Geothermal' : '1.B.2.d.i Geothermal'}, inplace=True)
 
-    one_B_2.rename_axis(index=None, inplace=True)
 
     return one_B_2
 
@@ -151,10 +146,9 @@ def read_and_process(file_path):
 
 #takes a dataframe (containing the relevant contents from a sheet) and the corresponding year and accumulates the rows into a list of data
 def accumulate(data, df, year: int):
-    (category_code, category_name, fuel) = ('','','')
+
     for i in df.index:
-        category_fuel = df["Category/Fuel"][i] 
-        
+        category_fuel = df["Category/Fuel"][i]
         if is_category(category_fuel):
             (category_code, category_name) = category_fuel.split(' ', maxsplit=1)
             category_code = correct_code(category_code)
@@ -166,17 +160,18 @@ def accumulate(data, df, year: int):
         else:
             fuel = category_fuel
     
-        for gas in ["CO2", "CH4", "N2O"]:
+        for gas_type in df.columns[1:]:
 
-            if gas in df.columns:
+            (gas, type) = gas_type.split(' ', maxsplit=1)
             
-                data.append({"Year" : year,
-                             "Category code" : category_code,
-                             "Category name" : category_name,
-                             "Fuel" : fuel,
-                             "Gas" : gas,
-                             "Units": "kt",
-                             "Value" : df[gas][i]})
+            data.append({"Year" : year, 
+                         "Category code" : category_code, 
+                         "Category name" : category_name, 
+                         "Fuel" : fuel, 
+                         "Gas" : gas,
+                         "Type": type,
+                         "Units": "kt", 
+                         "Value" : df[gas_type][i]})
 
 folder = "PRT-CRT-2026-V1.0"
 year = 1990
@@ -190,6 +185,7 @@ for file in os.listdir(os.fsencode(folder)):
     for df in dfs:
         accumulate(data, df, year)
     year = year + 1
+
     
 df = pd.DataFrame(data)
 df.to_csv("prt_crt_2026.csv", index=False)
