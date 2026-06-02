@@ -2,9 +2,49 @@ import pandas as pd
 import re
 import os
 
-def is_category(s):
-    return s[:1].isdigit()
+# This code is used to fix format into "code name" where code is somthing like 1.A.2.b.i.
+def is_level(str, n):
+    if n == 1:
+        return re.fullmatch(r'[1-5]',str)
+    elif n == 2:
+        return re.fullmatch(r'[A-J]', str)
+    elif n == 3:
+        return re.fullmatch(r'[1-9]', str) or str == "10" 
+    elif n == 4:
+        return re.fullmatch(r'[a-h]', str)
+    elif n == 5:
+        return str in ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"]
+    elif n == 6:
+        return re.fullmatch(r'[a-h]', str)
 
+def is_next(first, second):
+
+    for i in range(1,6):
+
+        if is_level(first, i) and is_level(second, i+1):
+            return True
+
+    return False
+
+def code_name(label):
+    
+    if label.rfind('.') == -1:
+        return ' '.join(label.split())
+        
+    segments = [segment.strip() for segment in label.split('.')]
+    last = segments[-2]
+    after = segments[-1].split()
+
+    if is_next(last, after[0]):
+        code = '.'.join(segments[:-1]) + '.' + after[0] + '.'
+        name = ' '.join(after[1:])
+    else:
+        code = '.'.join(segments[:-1]) + '.'
+        name = ' '.join(after)
+        
+    return " ".join([code, name])
+
+# This is applied to all indices for cleanup
 def clean_index(s):
     # Remove numbers inside parentheses, like (1)
     s = re.sub(r'\(\d+\)', '', s)
@@ -12,28 +52,42 @@ def clean_index(s):
     # Remove "(please specify)"
     s = re.sub(r'\(please specify\)', '', s)
 
-    # Replace whitespace of any lenth by a single space
-    s = re.sub(r'\s+', ' ', s)
+    # Fix format into "code name" where code is somthing like 1.A.2.b.i.
+    s = code_name(s)
 
-    # Remove spaces inside the category codes
-    s = re.sub(r'\s+(\w)\.', r'\1.' ,s )
-    
-    # Remove leading/trailing whitespace and return
-    return s.strip()
+    return s
 
-
+#Cleanup and reset indices to 1,2,3,...
 def pre_process(df):
     df.rename(index=clean_index, inplace=True)
     df.replace("NO\"", "NO", inplace=True)
     df.reset_index(inplace=True)
+
+# This code is for adding missing category codes
+def first_child(parent):
+    depth = len(parent.split('.'))
+    suffixes = ['1.','A.','1.','a.','i.','a.']
+    return parent + suffixes[depth-1]
     
-def correct_code(code):
-    code = re.sub(r'\s+', '', code)
+def next_child(child_code):
+    list = child_code.split('.')
+    list[-2] = chr(ord(list[-2]) + 1)
+    return '.'.join(list)
+
+def add_missing_codes(df):
     
-    if code[-1:] != '.':
-        code = code + '.'
-        
-    return code
+    for i in df.index:
+        entry = df["Category/Fuel"][i]
+        if entry[:1].isdigit():
+            parent_code = entry.split(' ', maxsplit=1)[0]
+        else:
+            child_code = first_child(parent_code)
+            df.loc[i, "Category/Fuel"] = child_code + ' ' +  entry
+            child_code = next_child(child_code)
+
+# Check if a string is a category or a fuel        
+def is_category(s):
+    return s[:1].isdigit()
 
 def one_A_s1(file_path):
     
@@ -41,7 +95,7 @@ def one_A_s1(file_path):
                    sheet_name="Table1.A(a)s1",
                    index_col=0,
                    usecols="B,H:K",
-                   names=["Category/Fuel", "CO2 Emissions", "CH4 Emissions", "N2O Emissions", "CO2 Captured"],
+                   names=["Category/Fuel", "CO2,Emissions", "CH4,Emissions", "N2O,Emissions", "CO2,Captured"],
                    skiprows=[0,1,2,3,4,5,6,7],
                    nrows=49
                    )
@@ -54,13 +108,13 @@ def one_A_s2(file_path):
                    sheet_name="Table1.A(a)s2",
                    index_col=0,
                    usecols="B,H:K",
-                   names=["Category/Fuel", "CO2 Emissions", "CH4 Emissions", "N2O Emissions", "CO2 Captured"],
+                   names=["Category/Fuel", "CO2,Emissions", "CH4,Emissions", "N2O,Emissions", "CO2,Captured"],
                    skiprows=[0,1,2,3,4,5,6,7],
                    nrows=121
                    )
 
-    one_A_s2.rename(index={'Rubber': '1.A.2.g.viii.x. Rubber',
-                       'Other Transformation Industry': '1.A.2.g.viii.y. Other Transformation Industry'},
+    one_A_s2.rename(index={'Rubber': '1.A.2.g.viii.a. Rubber',
+                       'Other Transformation Industry': '1.A.2.g.viii.b. Other Transformation Industry'},
                 inplace=True)
 
     return one_A_s2
@@ -71,7 +125,7 @@ def one_A_s3(file_path):
                    sheet_name="Table1.A(a)s3",
                    index_col=0,
                    usecols="B,H:J",
-                   names=["Category/Fuel", "CO2 Emissions", "CH4 Emissions", "N2O Emissions"],
+                   names=["Category/Fuel", "CO2,Emissions", "CH4,Emissions", "N2O,Emissions"],
                    skiprows=[0,1,2,3,4,5,6,7,55],
                    nrows=79
                    )
@@ -85,7 +139,7 @@ def one_A_s4(file_path):
                    sheet_name="Table1.A(a)s4",
                    index_col=0,
                    usecols="B,H:K",
-                   names=["Category/Fuel", "CO2 Emissions", "CH4 Emissions", "N2O Emissions", "CO2 Captured"],
+                   names=["Category/Fuel", "CO2,Emissions", "CH4,Emissions", "N2O,Emissions", "CO2,Captured"],
                    skiprows=[0,1,2,3,4,5,6,7],
                    nrows=92)
     one_A_s4.rename(index={'Military aviation' : '1.A.5.b.i. Military aviation'}, inplace=True)
@@ -98,7 +152,7 @@ def one_D(file_path):
                    sheet_name="Table1.D",
                    index_col=0,
                    usecols="B,G:I",
-                   names=["Category/Fuel", "CO2 Emissions", "CH4 Emissions", "N2O Emissions"],
+                   names=["Category/Fuel", "CO2,Emissions", "CH4,Emissions", "N2O,Emissions"],
                    skiprows=[0,1,2,3,4,5,6,7],
                    nrows=13
                    )
@@ -112,7 +166,7 @@ def one_B_1(file_path):
                         index_col=0,
                         skiprows=[0,1,2,3,4,5,6,7],
                         usecols="B,F:I",
-                        names=["Category/Fuel", "CH4 Emissions", "CO2 Emissions", "CH4 Recovery/Flaring", "CO2 Recovery/Flaring"],
+                        names=["Category/Fuel", "CH4,Emissions", "CO2,Emissions", "CH4,Recovery/Flaring", "CO2,Recovery/Flaring"],
                         nrows=13
                    )
 
@@ -125,11 +179,9 @@ def one_B_2(file_path):
                    index_col=0,
                    skiprows=[0,1,2,3,4,5,6,7],
                    usecols="B,I:L",
-                   names=["Category/Fuel", "CO2 Emissions", "CH4 Emissions", "N2O Emissions", "CO2 Recovery"],
+                   names=["Category/Fuel", "CO2,Emissions", "CH4,Emissions", "N2O,Emissions", "CO2,Recovery"],
                    nrows=25
                    )
-    one_B_2.rename(index={'Geothermal' : '1.B.2.d.i Geothermal'}, inplace=True)
-
 
     return one_B_2
 
@@ -140,19 +192,45 @@ def one_C(file_path):
                    index_col=0,
                    skiprows=[0,1,2,3,4,5,6,7],
                    usecols="B,E",
-                   names=["Category/Fuel", "CO2 Emissions"],
+                   names=["Category/Fuel", "CO2,Emissions"],
                    nrows=8
                    )
 
     return one_C
+
+def two_I_AH(file_path):
+
+    two_I_AH = pd.read_excel(file_path,
+                   sheet_name="Table2(I).A-H",
+                   index_col=0,
+                   skiprows=[0,1,2,3,4,5,6,7],
+                   usecols="B,H:N",
+                   names=["Category/Fuel",
+                          "CO2,Emissions",
+                          "CH4,Emissions",
+                          "N2O,Emissions",
+                          "Fossil CO2,Recovery/Capture",
+                          "Biogenic CO2,Recovery/Capture",
+                          "CH4,Recovery/Capture",
+                          "N2O,Recovery/Capture"],
+                   nrows=91
+                   )
+
+    return two_I_AH
 
 #This reads the relevant rows and columns in each of the sheets from the file into dataframes, does some cleaning and returns a list of dataframes
 def read_and_process(file_path):
 
     dfs = []
     for sheet in sheets:
+        
         df = sheet(file_path)
         pre_process(df)
+
+        # For combustion categories we already added missing codes by hand, as it's difficult to distinguish categories from fuels before we have codes. 
+        if sheet not in combustion:
+            add_missing_codes(df)
+
         dfs.append(df)
 
     return dfs
@@ -163,8 +241,7 @@ def accumulate(data, df, year: int):
     for i in df.index:
         category_fuel = df["Category/Fuel"][i]
         if is_category(category_fuel):
-            (category_code, category_name) = category_fuel.split(' ', maxsplit=1)
-            category_code = correct_code(category_code)
+            (category_code, category_name) = category_fuel.split(maxsplit=1)
 
             if category_code.startswith("1.A") or category_code.startswith("1.D"):
                 fuel = "All fuels except biomass"
@@ -175,7 +252,7 @@ def accumulate(data, df, year: int):
     
         for gas_type in df.columns[1:]:
 
-            (gas, type) = gas_type.split(' ', maxsplit=1)
+            (gas, type) = gas_type.split(',', maxsplit=1)
             
             data.append({"Year" : year, 
                          "Category code" : category_code, 
@@ -189,7 +266,9 @@ def accumulate(data, df, year: int):
 folder = "PRT-CRT-2026-V1.0"
 year = 1990
 data = []
-sheets = [one_A_s1, one_A_s2, one_A_s3, one_B_1, one_B_2, one_D]
+combustion = [one_A_s1, one_A_s2, one_A_s3, one_A_s4, one_D]
+others = [one_B_1, one_B_2, one_C, two_I_AH]
+sheets = combustion + others
 
 for file in os.listdir(os.fsencode(folder)):
     
@@ -198,6 +277,7 @@ for file in os.listdir(os.fsencode(folder)):
     for df in dfs:
         accumulate(data, df, year)
     year = year + 1
+
 
     
 df = pd.DataFrame(data)
