@@ -1,0 +1,5 @@
+#Ignore files that end with ~ (emacs temp files)
+*~
+
+# Ignore everything inside the data folder
+PRT-CRT-2026-V1.0/*
