@@ -133,6 +133,19 @@ def one_B_2(file_path):
 
     return one_B_2
 
+def one_C(file_path):
+
+    one_C = pd.read_excel(file_path,
+                   sheet_name="Table1.C",
+                   index_col=0,
+                   skiprows=[0,1,2,3,4,5,6,7],
+                   usecols="B,E",
+                   names=["Category/Fuel", "CO2 Emissions"],
+                   nrows=8
+                   )
+
+    return one_C
+
 #This reads the relevant rows and columns in each of the sheets from the file into dataframes, does some cleaning and returns a list of dataframes
 def read_and_process(file_path):
 
