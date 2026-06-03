@@ -27,11 +27,12 @@ def is_next(first, second):
     return False
 
 def code_name(label):
-    
-    if label.rfind('.') == -1:
-        return ' '.join(label.split())
-        
+            
     segments = [segment.strip() for segment in label.split('.')]
+    
+    if len(segments) == 1:
+        return ' '.join(label.split())
+
     last = segments[-2]
     after = segments[-1].split()
 
@@ -69,21 +70,69 @@ def first_child(parent):
     suffixes = ['1.','A.','1.','a.','i.','a.']
     return parent + suffixes[depth-1]
     
-def next_child(child_code):
+def next_code(child_code):
     list = child_code.split('.')
-    list[-2] = chr(ord(list[-2]) + 1)
+    depth = len(list) - 1
+    list[-2] = next(list[-2], depth)
+    
     return '.'.join(list)
 
+def next(segment, depth):
+    if depth == 5:
+        return next_roman_numeral(segment)
+    else:
+        return  chr(ord(segment) + 1)
+
+def next_roman_numeral(numeral):
+    if numeral == 'i':
+        return 'ii'
+    if numeral == 'ii':
+        return 'iii'
+    if numeral == 'iii':
+        return 'iv'
+    if numeral == 'iv':
+        return 'v'
+    if numeral == 'v':
+        return 'vi'
+    if numeral == 'vi':
+        return 'vii'
+    if numeral == 'vii':
+        return 'viii'
+    if numeral == 'viii':
+        return 'ix'
+    if numeral == 'ix':
+        return 'x'
+
 def add_missing_codes(df):
-    
-    for i in df.index:
-        entry = df["Category/Fuel"][i]
-        if entry[:1].isdigit():
-            parent_code = entry.split(' ', maxsplit=1)[0]
-        else:
-            child_code = first_child(parent_code)
-            df.loc[i, "Category/Fuel"] = child_code + ' ' +  entry
-            child_code = next_child(child_code)
+
+    i = 0
+    entries = df["Category/Fuel"]
+    len = entries.size
+
+    while i < len:
+        # Skip entries that already have a code
+        while i < len:
+            entry = entries[i]
+            if not entry[:1].isdigit():
+                break
+            i = i + 1
+
+        # Deal with first entry in a consecutive block of entries without code
+        previous = entries[i-1]
+        parent_code = previous.split(maxsplit=1)[0]
+        code = first_child(parent_code)
+        df.loc[i, "Category/Fuel"] = code + ' ' +  entry
+        i = i + 1
+
+        # Deal with remaining entries in a consecutive block of entries without code
+        while i < len:
+            entry = entries[i]
+            if entry[:1].isdigit():
+                break
+            code = next_code(code)
+            df.loc[i, "Category/Fuel"] = code + ' ' +  entry
+            i = i + 1
+
 
 # Check if a string is a category or a fuel        
 def is_category(s):
@@ -277,8 +326,6 @@ for file in os.listdir(os.fsencode(folder)):
     for df in dfs:
         accumulate(data, df, year)
     year = year + 1
-
-
     
 df = pd.DataFrame(data)
 df.to_csv("prt_crt_2026.csv", index=False)
