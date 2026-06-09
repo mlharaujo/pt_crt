@@ -2,7 +2,7 @@ import pandas as pd
 import re
 import os
 
-# This code is used to fix format into "code name" where code is somthing like 1.A.2.b.i.
+# Detects whether str is a valid depth n segment of a category code
 def is_level(str, n):
     if n == 1:
         return re.fullmatch(r'[1-5]',str)
@@ -17,6 +17,8 @@ def is_level(str, n):
     elif n == 6:
         return re.fullmatch(r'[a-h]', str)
 
+# Detects whether first and second are valid consecutive sections of a category code
+# e.g. (1, A) , (A, 1) , (1, a) , (a, i), (i, a) are all valid
 def is_next(first, second):
 
     for i in range(1,6):
@@ -26,19 +28,27 @@ def is_next(first, second):
 
     return False
 
+# Takes a label and returns it in correct format, e.g.
+# "1. A .1.b Petroleum    refining" -> "1.A.1.b. Petroleum refining"
 def code_name(label):
             
     segments = [segment.strip() for segment in label.split('.')]
     
+    # This is the case where we get only a name, with no code
     if len(segments) == 1:
         return ' '.join(label.split())
 
+    # the stuff between the last two "." 
     last = segments[-2]
+
+    # everything after the last "."
     after = segments[-1].split()
 
+    # the case where the code continues after the last "." e.g. "1.A.2 Manufacturing industries and construction"
     if is_next(last, after[0]):
         code = '.'.join(segments[:-1]) + '.' + after[0] + '.'
         name = ' '.join(after[1:])
+    # the case where the last "." marks the end of the code, as it should, e.g. "1.A.1. Energy industries"
     else:
         code = '.'.join(segments[:-1]) + '.'
         name = ' '.join(after)
@@ -53,7 +63,7 @@ def clean_index(s):
     # Remove "(please specify)"
     s = re.sub(r'\(please specify\)', '', s)
 
-    # Fix format into "code name" where code is somthing like 1.A.2.b.i.
+    # Fix format
     s = code_name(s)
 
     return s
@@ -64,19 +74,21 @@ def pre_process(df):
     df.replace("NO\"", "NO", inplace=True)
     df.reset_index(inplace=True)
 
-# This code is for adding missing category codes
+# The first child code of a given category code
 def first_child(parent):
     depth = len(parent.split('.'))
     suffixes = ['1.','A.','1.','a.','i.','a.']
     return parent + suffixes[depth-1]
-    
-def next_code(child_code):
-    list = child_code.split('.')
+
+# The code that follows a given category code
+def next_code(code):
+    list = code.split('.')
     depth = len(list) - 1
     list[-2] = next(list[-2], depth)
     
     return '.'.join(list)
 
+# The code segment that follows a given code segment
 def next(segment, depth):
     if depth == 5:
         return next_roman_numeral(segment)
@@ -102,6 +114,9 @@ def next_roman_numeral(numeral):
         return 'ix'
     if numeral == 'ix':
         return 'x'
+
+# Goes through entries in a dataframe and adds missing category codes to the entries in the "Category/Fuel" column
+# To be applied only when this column consists exclusively of categories, not fuels
 
 def add_missing_codes(df):
 
@@ -134,7 +149,8 @@ def add_missing_codes(df):
             i = i + 1
 
 
-# Check if a string is a category or a fuel        
+# Check if a string starts with a digit
+# We will use it in a context where this implies it must consist of a category code and name
 def is_category(s):
     return s[:1].isdigit()
 
@@ -311,6 +327,8 @@ def accumulate(data, df, year: int):
                          "Type": type,
                          "Units": "kt", 
                          "Value" : df[gas_type][i]})
+
+# Start of script
 
 folder = "PRT-CRT-2026-V1.0"
 year = 1990
